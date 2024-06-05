@@ -1,0 +1,6 @@
+VAR
+	e1 : Enum1;
+	gCounter : USINT;
+	flag : BOOL := TRUE;
+	struct1 : Struct1;
+END_VAR
