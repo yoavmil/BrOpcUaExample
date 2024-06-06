@@ -76,3 +76,4 @@ there is more than one option out there:
 - https://github.com/rparak/OPCUA_Simple
 - [UaExpert](https://www.unified-automation.com/downloads/opc-ua-clients.html) - at client demo tool
 - [Min. Console Example](https://stackoverflow.com/a/30625358/2378218)
+- [OPC Foundation Help](https://opcfoundation.github.io/UA-.NETStandard/help/)
