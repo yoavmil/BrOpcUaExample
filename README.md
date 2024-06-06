@@ -51,20 +51,28 @@ The connection between a PLC and a dotnet PC app is by using `OPC UA` protocol. 
 
 > Note: why not `PVI`? It isn't supported by modern dotnet, it isn't secure, and it looks as BR doesn't develop it anymore. `OPC UA` is an open protocol adopted by many PLC vendors.
 
+Check list:
+- Configuration View > your controller > Connectivity > add 
+
+## Client side
+
+To connect to a variable we need to know its full address, which contains a namespace, the program name and finally the variable name. The variables namespace is 6. 
+
+for example if in program `MyProgram` the is a variable `MyVariable`, the address would be: `"ns=6;s=::MyProgram:MyVariable"`.
+
+### Client SDK options
+
+there is more than one option out there:
+- [unified-automation](https://www.unified-automation.com/products/client-sdk/net-ua-client-sdk.html), commercial.
+- [QuickOPC](https://www.opclabs.com/products/quickopc), commercial.
+- [technosoftware](https://technosoftware.com/?product=opc-ua-client-net/), commercial.
+- [OPCFoundation](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua/)
+- ~~https://github.com/joc-luis/OPCUaClient~~, uses OPCFoundation internally.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## Resources and Tools
+- https://www.youtube.com/watch?v=0RO-Veo4mBc&ab_channel=MA-ITMyAutomation-KennisenKundeinIAenIT
+- https://github.com/rparak/OPCUA_Simple
+- [UaExpert](https://www.unified-automation.com/downloads/opc-ua-clients.html) - at client demo tool
+- [Min. Console Example](https://stackoverflow.com/a/30625358/2378218)
