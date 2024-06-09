@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UI", "UI\UI.csproj", "{30689C8D-B592-4B81-B9BD-3E5719E30CBB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlcClient", "PlcClient\PlcClient.csproj", "{0671360B-4198-471E-95CB-03EB2A8A8CFE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{30689C8D-B592-4B81-B9BD-3E5719E30CBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30689C8D-B592-4B81-B9BD-3E5719E30CBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30689C8D-B592-4B81-B9BD-3E5719E30CBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30689C8D-B592-4B81-B9BD-3E5719E30CBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E3B62A7B-E46E-48DB-B6C5-D1F28C40DB00}
+	EndGlobalSection
+EndGlobal
