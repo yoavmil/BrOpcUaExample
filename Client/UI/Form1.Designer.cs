@@ -28,8 +28,13 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             connectBtn = new Button();
-            devicesBtn = new Button();
+            counter = new NumericUpDown();
+            brDeviceBindingSource = new BindingSource(components);
+            flagCheckBox = new CheckBox();
+            ((System.ComponentModel.ISupportInitialize)counter).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)brDeviceBindingSource).BeginInit();
             SuspendLayout();
             // 
             // connectBtn
@@ -42,31 +47,52 @@
             connectBtn.UseVisualStyleBackColor = true;
             connectBtn.Click += connectBtn_Click;
             // 
-            // devicesBtn
+            // counter
             // 
-            devicesBtn.Location = new Point(38, 62);
-            devicesBtn.Name = "devicesBtn";
-            devicesBtn.Size = new Size(75, 23);
-            devicesBtn.TabIndex = 0;
-            devicesBtn.Text = "Devices";
-            devicesBtn.UseVisualStyleBackColor = true;
-            devicesBtn.Click += getDevicesBtn_Click;
+            counter.DataBindings.Add(new Binding("Value", brDeviceBindingSource, "Counter", true));
+            counter.Location = new Point(38, 72);
+            counter.Maximum = new decimal(new int[] { 256, 0, 0, 0 });
+            counter.Name = "counter";
+            counter.ReadOnly = true;
+            counter.Size = new Size(120, 23);
+            counter.TabIndex = 1;
+            // 
+            // brDeviceBindingSource
+            // 
+            brDeviceBindingSource.DataSource = typeof(PlcClient.BrDevice);
+            // 
+            // flagCheckBox
+            // 
+            flagCheckBox.AutoSize = true;
+            flagCheckBox.Location = new Point(38, 111);
+            flagCheckBox.Name = "flagCheckBox";
+            flagCheckBox.Size = new Size(46, 19);
+            flagCheckBox.TabIndex = 2;
+            flagCheckBox.Text = "flag";
+            flagCheckBox.UseVisualStyleBackColor = true;
+            flagCheckBox.CheckedChanged += flagCheckBox_CheckedChanged;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
-            Controls.Add(devicesBtn);
+            ClientSize = new Size(328, 229);
+            Controls.Add(flagCheckBox);
+            Controls.Add(counter);
             Controls.Add(connectBtn);
             Name = "Form1";
             Text = "Form1";
+            ((System.ComponentModel.ISupportInitialize)counter).EndInit();
+            ((System.ComponentModel.ISupportInitialize)brDeviceBindingSource).EndInit();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
 
         private Button connectBtn;
-        private Button devicesBtn;
+        private NumericUpDown counter;
+        private BindingSource brDeviceBindingSource;
+        private CheckBox flagCheckBox;
     }
 }

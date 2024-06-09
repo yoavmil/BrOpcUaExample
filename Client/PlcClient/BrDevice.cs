@@ -1,16 +1,13 @@
 ﻿using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
-using System.Net.Sockets;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace PlcClient
 {
-    public class BrDevice 
+    public class BrDevice
     {
         private readonly ApplicationInstance _application;
         private string _plcOpcUrl = "opc.tcp://127.0.0.1:4840";
-        private string configPath = "App.config";
 
         public BrDevice()
         {
@@ -39,80 +36,64 @@ namespace PlcClient
 
             var endpointConfiguration = EndpointConfiguration.Create(config);
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, endpointConfiguration);
-            var session = Session.Create(config, endpoint, false, "", 60000, new UserIdentity(new AnonymousIdentityToken()), null).Result;
+            _session = Session.Create(config, endpoint, false, "", 60000, new UserIdentity(new AnonymousIdentityToken()), null).Result;
 
-            var rootNode = await session.NodeCache.FindAsync(Objects.RootFolder).ConfigureAwait(false);
+            AddSubscriptions();
+            
+            await ReadInitialNodeValues();
 
-            // Assume the global variable is under the Objects folder.
-            uint namespaceID = 6; // BR VPI
-            var gCounterName = "gCounter"; // Replace with the actual name of the global variable.
-            var gCounterNodeString = $"ns={namespaceID};s=::AsGlobalPV:{gCounterName}";
-            var gCounterNodeId = new NodeId(gCounterNodeString);
-            /*ns=6;s=::AsGlobalPV:gCounter#*/
-
-            var flagName = "flag";
-            var flagNodeString = $"ns={namespaceID};s=::AsGlobalPV:{flagName}";
-            var flagNodeId = new NodeId(flagNodeString);
-
-
-            await WriteNodeValueAsync(session, gCounterNodeId, (byte)0);
-
-            // Read the value of the global variable
-            var gCounterValue = await ReadNodeValueAsync(session, gCounterNodeId);
-
-            if (gCounterValue != null)
-            {
-                Console.WriteLine($"Global Variable Value: {gCounterValue}");
-            }
-            else
-            {
-                Console.WriteLine("Failed to read the global variable value.");
-            }
-
-            // Read the value of the global variable
-            var flagValue = await ReadNodeValueAsync(session, flagNodeId);
-
-            if (flagValue != null)
-            {
-                Console.WriteLine($"Global Variable Value: {gCounterValue}");
-            }
-            else
-            {
-                Console.WriteLine("Failed to read the global variable value.");
-            }
-
-            await WriteNodeValueAsync(session, flagNodeId, false);
-
-            // Read the value of the global variable
-            flagValue = await ReadNodeValueAsync(session, flagNodeId);
-
-            if (flagValue != null)
-            {
-                Console.WriteLine($"Global Variable Value: {gCounterValue}");
-            }
-            else
-            {
-                Console.WriteLine("Failed to read the global variable value.");
-            }
-
-            // Get the type of the global variable
-            var dataTypeNodeId = await GetNodeDataTypeAsync(session, gCounterNodeId);
-            if (dataTypeNodeId != null)
-            {
-                var dataTypeName = GetDataTypeName(dataTypeNodeId);
-                Console.WriteLine($"Global Variable Data Type: {dataTypeName}");
-            }
-            else
-            {
-                Console.WriteLine("Failed to get the data type of the global variable.");
-            }
-
-
-            // Close session.
-            session.Close();
         }
 
-        private static async Task<object?> ReadNodeValueAsync(Session session, NodeId nodeId)
+        void AddSubscriptions()
+        {
+
+            // Create a subscription
+            var subscription = new Subscription(_session?.DefaultSubscription)
+            {
+                PublishingInterval = 1000,
+                KeepAliveCount = 10,
+                LifetimeCount = 30,
+                MaxNotificationsPerPublish = 1000,
+                Priority = 0
+            };
+
+            // Create a monitored item for the specified node
+            var monitoredCounter = new MonitoredItem(subscription.DefaultItem)
+            {
+                StartNodeId = _counterNodeId,
+                AttributeId = Attributes.Value,
+                SamplingInterval = 1000,
+                QueueSize = 10,
+                DiscardOldest = true
+            };
+            monitoredCounter.Notification += OnDataChange;
+            subscription.AddItem(monitoredCounter);
+
+            var monitoredFlag = new MonitoredItem(subscription.DefaultItem)
+            {
+                StartNodeId = _flagNodeId,
+                AttributeId = Attributes.Value,
+                SamplingInterval = 1000,
+                QueueSize = 10,
+                DiscardOldest = true
+            };
+            monitoredFlag.Notification += OnDataChange;
+            subscription.AddItem(monitoredFlag);
+
+            _session?.AddSubscription(subscription);
+            subscription.Create();
+        }
+
+        void OnDataChange(MonitoredItem item, MonitoredItemNotificationEventArgs e)
+        {
+            foreach (var value in item.DequeueValues())
+            {
+                if (item.StartNodeId == _counterNodeId) Counter = (byte)value.Value;
+                if (item.AttributeId == _flagNodeId) _flag = (bool)value.Value;
+            }
+        }
+
+        private async Task<object?> ReadNodeValueAsync(NodeId nodeId)
         {
             var readValueId = new ReadValueId
             {
@@ -123,8 +104,8 @@ namespace PlcClient
             var readValueIds = new ReadValueIdCollection { readValueId };
 
             var requestHeader = new RequestHeader();
-            var readResults = await session.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
-            
+            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
+
             if (StatusCode.IsGood(readResults.Results[0].StatusCode))
             {
                 return readResults.Results[0].Value;
@@ -133,9 +114,9 @@ namespace PlcClient
             return null;
         }
 
-        private static async Task<bool> WriteNodeValueAsync(Session session, NodeId nodeId, object value)
+        private async Task<bool> WriteNodeValueAsync(NodeId nodeId, object value)
         {
-            var isWritable = await IsNodeWritableAsync(session, nodeId);
+            var isWritable = await IsNodeWritableAsync(nodeId);
             if (!isWritable) return false;
             var writeValue = new WriteValue
             {
@@ -147,7 +128,7 @@ namespace PlcClient
             var writeValues = new WriteValueCollection { writeValue };
 
             var requestHeader = new RequestHeader();
-            var writeResults = await session.WriteAsync(requestHeader, writeValues, CancellationToken.None);
+            var writeResults = await _session?.WriteAsync(requestHeader, writeValues, CancellationToken.None);
 
             bool isGood = StatusCode.IsGood(writeResults.Results[0]);
             if (!isGood)
@@ -157,7 +138,7 @@ namespace PlcClient
             return isGood;
         }
 
-        private static async Task<bool> IsNodeWritableAsync(Session session, NodeId nodeId)
+        private async Task<bool> IsNodeWritableAsync(NodeId nodeId)
         {
             var readValueId = new ReadValueId
             {
@@ -168,7 +149,7 @@ namespace PlcClient
             var readValueIds = new ReadValueIdCollection { readValueId };
 
             var requestHeader = new RequestHeader();
-            var readResults = await session.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
+            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
 
             if (StatusCode.IsGood(readResults.Results[0].StatusCode))
             {
@@ -179,7 +160,7 @@ namespace PlcClient
             return false;
         }
 
-        private static async Task<NodeId?> GetNodeDataTypeAsync(Session session, NodeId nodeId)
+        private async Task<NodeId?> GetNodeDataTypeAsync(NodeId nodeId)
         {
             var readValueId = new ReadValueId
             {
@@ -190,7 +171,7 @@ namespace PlcClient
             var readValueIds = new ReadValueIdCollection { readValueId };
 
             var requestHeader = new RequestHeader();
-            var readResults = await session.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
+            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
 
             if (StatusCode.IsGood(readResults.Results[0].StatusCode))
             {
@@ -231,18 +212,80 @@ namespace PlcClient
                 { DataTypeIds.Structure, typeof(object) } // For complex structures, typically you will define custom classes or structs
             };
 
-            if (dataTypeMapping.TryGetValue(dataTypeNodeId, out Type csharpType))
+            if (dataTypeMapping.TryGetValue(dataTypeNodeId, out Type? csharpType))
             {
-                return csharpType.Name;
+                return csharpType?.Name ?? "Unknown";
             }
             return "Unknown";
         }
 
-        public void ReadGlobal()
+        Session? _session;
+        #region nodes 
+        private async Task ReadInitialNodeValues()
         {
-            //var globalsNode = _client.Read("flag");
-
-            //var flagTag = _client.Read("ns=6;s=::AsGlobalPV:flag");
+            if (_counterNodeId != null) _counter = await ReadNodeValueAsync(_counterNodeId) as byte? ?? 0;
+            if (_flagNodeId != null) _flag = await ReadNodeValueAsync(_flagNodeId) as bool? ?? false;
         }
+
+        #region counter
+        public byte Counter
+        {
+            get
+            {
+                return _counter;
+            }
+            private set
+            {
+                if (_counter != value)
+                {
+                    _counter = value;
+                    CounterChanged?.Invoke(_counter);
+                }
+            }
+        }
+        private byte _counter = 0;
+        private NodeId? _counterNodeId = new NodeId($"ns=6;s=::AsGlobalPV:gCounter");
+        // ns is namespace, and ns=6 is the namespace of the PLC variables
+
+        public delegate void CounterChangedEventHandler(byte newCounter);
+        public event CounterChangedEventHandler CounterChanged;
+        #endregion
+
+        #region flag
+        public bool Flag
+        {
+            get
+            {
+                return _flag;
+            }
+            set
+            {
+                _ = WriteNodeValueAsync(_flagNodeId, value);
+                // the event will set the internal _flag
+            }
+        }
+        private bool _flag;
+        NodeId _flagNodeId = new NodeId("ns=6;s=::AsGlobalPV:flag");
+        #endregion
+
+        /*
+        Each variable could be either readonly or readwrite
+        each variable needs a nodeid
+        each variable needs a datatype, maybe Variable<T>
+        have a ValueChanged event
+        all nodes should be written and read together if possible
+        program name, global if empty
+        class IReadOnlyVar {
+            IVar<T>(string name, string? programName)
+            T Value {get;}
+            Event ValueChanged;
+        }
+        class IReadWriteVar : IReadOnlyVar {
+            T Value {get;set};
+        }
+
+         */
+
+        #endregion nodes
     }
 }

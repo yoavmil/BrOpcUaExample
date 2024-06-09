@@ -9,17 +9,18 @@ namespace UI
             InitializeComponent();
         }
 
-        BrDevice plc;
+        BrDevice? plc = null;
 
         private async void connectBtn_Click(object sender, EventArgs e)
         {
             plc = new BrDevice();
             await plc.Connect();
+
+            flagCheckBox.Checked = plc.Flag;
+            counter.Value = plc.Counter;
+            plc.CounterChanged += (v) => counter.BeginInvoke((Action)(() => counter.Value = v));
         }
 
-        private void getDevicesBtn_Click(object sender, EventArgs e)
-        {
-            //plc.GetDevices();
-        }
+        private void flagCheckBox_CheckedChanged(object sender, EventArgs e) => plc.Flag = flagCheckBox.Checked;
     }
 }
