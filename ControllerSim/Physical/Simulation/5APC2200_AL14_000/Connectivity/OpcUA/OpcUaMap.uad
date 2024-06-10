@@ -12,6 +12,18 @@
       <GlobalVariables Name="Global Variables">
         <Variable Name="gCounter" />
         <Variable Name="flag" />
+        <Variable Name="struct1">
+          <Variable Name="enum1" />
+          <Variable Name="inner_struct" />
+          <Variable Name="str" />
+          <Variable Name="int_array" />
+          <Variable Name="myFloat" />
+        </Variable>
+        <Variable Name="e1" />
+        <Variable Name="struct2">
+          <Variable Name="myFloat" />
+          <Variable Name="myByte" />
+        </Variable>
       </GlobalVariables>
     </Module>
   </DefaultView>

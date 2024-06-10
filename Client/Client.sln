@@ -3,9 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UI", "UI\UI.csproj", "{30689C8D-B592-4B81-B9BD-3E5719E30CBB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UI", "UI\UI.csproj", "{30689C8D-B592-4B81-B9BD-3E5719E30CBB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlcClient", "PlcClient\PlcClient.csproj", "{0671360B-4198-471E-95CB-03EB2A8A8CFE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PlcClient", "PlcClient\PlcClient.csproj", "{0671360B-4198-471E-95CB-03EB2A8A8CFE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AECD30F2-2435-4AB7-B912-B62FD95FA791} = {AECD30F2-2435-4AB7-B912-B62FD95FA791}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TDOs", "TDOs\TDOs.csproj", "{AECD30F2-2435-4AB7-B912-B62FD95FA791}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,10 @@ Global
 		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0671360B-4198-471E-95CB-03EB2A8A8CFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AECD30F2-2435-4AB7-B912-B62FD95FA791}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AECD30F2-2435-4AB7-B912-B62FD95FA791}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AECD30F2-2435-4AB7-B912-B62FD95FA791}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AECD30F2-2435-4AB7-B912-B62FD95FA791}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

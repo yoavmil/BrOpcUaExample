@@ -65,7 +65,11 @@ Check list:
 - Configuration View > your controller > Connectivity > add `OPC UA Default View file`
 - Open the new `OPC UA Default view`, find the variables you want to read and write and 
   enable the tags you want.
-- Physical View > Your controller > right click > configuration > OPC-UA System > Activate
+- Physical View > Your controller > right click > configuration > OPC-UA System > 
+  Activate
+- Physical View > Your controller > right click > configuration > OPC-UA System > 
+  Information models > PV > Version > 2.0 
+  ([allows reading complex types, ex structs](https://opcfoundation.org/forum/opc-ua-implementation-stacks-tools-and-samples/method-call-for-custom-complex-types/#p4097))
 
 ## Client side
 
@@ -84,6 +88,14 @@ To connect to a server, there is some certification validation going around,
 and for that there are 2 files I copied from the OPC Foundation samples: `App.Config` and
 `Quickstarts.ReferenceClient.Config.xml`.
 
+## Reading complex structures
+
+This demo shows how to transfer structures that exist both in the server and in the client.
+They client classes need to reflect the PLC structures, see `PlcStructs.cs`.
+
+The client reads the variable data as converts it to Json, and later to C# objects,
+see `ReadStructure<T>` at `PlcStructs.cs`.
+
 ### Client SDK options
 
 there is more than one option out there:
@@ -95,26 +107,40 @@ there is more than one option out there:
 
 
 ## Resources and Tools
+- [OPC Foundation Forum](https://opcfoundation.org/forum/)
 - [How to activate OPC UA connectivity in B&R mapp View](https://www.youtube.com/watch?v=0RO-Veo4mBc&ab_channel=MA-ITMyAutomation-KennisenKundeinIAenIT)
 - [OPC UA Simple App](https://github.com/rparak/OPCUA_Simple)
 - [UaExpert](https://www.unified-automation.com/downloads/opc-ua-clients.html) - a client for debugging
+- [Json Encode/Decoder Usage](https://github.com/parkey1231/UA-.NETStandard/blob/d31c8cc6e4412f169f56f6c3629c2f748db652ae/SampleApplications/Samples/NetCoreComplexClient/Program.cs#L285)
+
+## Todo
+- Hadnle PLC not found
+- ~~Read~~/Write and reflect complex types, ex. structs
+- variables from an program, and not global.
+- write a class that encapsulates the variable and handles the access calls.
 
 ## Types Dictionary
 
-| OPC UA     | C#       |
-| ---------- | -------- |
-| Boolean    | bool     |
-| SByte      | sbyte    |
-| Byte       | byte     |
-| Int16      | short    |
-| UInt16     | ushort   |
-| Int32      | int      |
-| UInt32     | uint     |
-| Int64      | long     |
-| UInt64     | ulong    |
-| Float      | float    |
-| Double     | double   |
-| String     | string   |
-| DateTime   | DateTime |
-| Guid       | Guid     |
-| ByteString | byte[]   |
+| PLC           | OPC UA   | C#       |
+| ------------- | -------- | -------- |
+| BOOL          | Boolean  | bool     |
+| SINT          | SByte    | sbyte    |
+| USINT         | Byte     | byte     |
+| INT           | Int16    | short    |
+| UINT          | UInt16   | ushort   |
+| DINT          | Int32    | int      |
+| UDINT         | UInt32   | uint     |
+| LINT          | Int64    | long     |
+| ULINT         | UInt64   | ulong    |
+| REAL          | Float    | float    |
+| LREAL         | Double   | double   |
+| STRING        | String   | string   |
+| WSTRING       | String   | string   |
+| TIME          | Duration | TimeSpan |
+| DATE          | DateTime | DateTime |
+| TIME_OF_DAY   | Time     | TimeSpan |
+| DATE_AND_TIME | DateTime | DateTime |
+| BYTE          | Byte     | byte     |
+| WORD          | UInt16   | ushort   |
+| DWORD         | UInt32   | uint     |
+| LWORD         | UInt64   | ulong    |

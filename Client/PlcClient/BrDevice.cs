@@ -1,6 +1,8 @@
 ﻿using Opc.Ua;
 using Opc.Ua.Client;
+using Opc.Ua.Client.ComplexTypes;
 using Opc.Ua.Configuration;
+using System.Diagnostics;
 
 namespace PlcClient
 {
@@ -39,9 +41,52 @@ namespace PlcClient
             _session = Session.Create(config, endpoint, false, "", 60000, new UserIdentity(new AnonymousIdentityToken()), null).Result;
 
             AddSubscriptions();
-            
+
             await ReadInitialNodeValues();
 
+            await OpcUtils.PrintGlobalTypeNames(_session, 6);
+            OpcUtils.PrintDataTypeSystem(_session, 6);
+
+            #region demonstrate reading complex types
+            NodeId struct1NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct1");
+            NodeId struct2NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct2");
+            NodeId enumNodeId = new NodeId($"ns=6;s=::AsGlobalPV:e1");
+            var s1 = await OpcUtils.ReadStructure<TDOs.Struct1>(_session, struct1NodeId);
+            var s2 = await OpcUtils.ReadStructure<TDOs.Struct2>(_session, struct2NodeId);
+            var e1 = await OpcUtils.ReadStructure<TDOs.Enum1>(_session, enumNodeId);
+            #endregion
+        }
+
+        // TODO demonstrate and move to OpcUtils
+        private void WriteValue(Session session, NodeId variableId, DataValue value)
+        {
+            WriteValue nodeToWrite = new WriteValue();
+            nodeToWrite.NodeId = variableId;
+            nodeToWrite.AttributeId = Attributes.Value;
+            nodeToWrite.Value = new DataValue();
+            nodeToWrite.Value.WrappedValue = value.WrappedValue;
+
+            WriteValueCollection nodesToWrite = new WriteValueCollection();
+            nodesToWrite.Add(nodeToWrite);
+
+            // read the attributes.
+            StatusCodeCollection results = null;
+            DiagnosticInfoCollection diagnosticInfos = null;
+
+            ResponseHeader responseHeader = session.Write(
+                null,
+                nodesToWrite,
+                out results,
+                out diagnosticInfos);
+
+            ClientBase.ValidateResponse(results, nodesToWrite);
+            ClientBase.ValidateDiagnosticInfos(diagnosticInfos, nodesToWrite);
+
+            // check for error.
+            if (StatusCode.IsBad(results[0]))
+            {
+                throw ServiceResultException.Create(results[0], 0, diagnosticInfos, responseHeader.StringTable);
+            }
         }
 
         void AddSubscriptions()
@@ -267,24 +312,7 @@ namespace PlcClient
         private bool _flag;
         NodeId _flagNodeId = new NodeId("ns=6;s=::AsGlobalPV:flag");
         #endregion
-
-        /*
-        Each variable could be either readonly or readwrite
-        each variable needs a nodeid
-        each variable needs a datatype, maybe Variable<T>
-        have a ValueChanged event
-        all nodes should be written and read together if possible
-        program name, global if empty
-        class IReadOnlyVar {
-            IVar<T>(string name, string? programName)
-            T Value {get;}
-            Event ValueChanged;
-        }
-        class IReadWriteVar : IReadOnlyVar {
-            T Value {get;set};
-        }
-
-         */
+        
 
         #endregion nodes
     }

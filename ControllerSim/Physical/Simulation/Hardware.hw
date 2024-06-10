@@ -21,6 +21,6 @@
     <Parameter ID="ActivateOpcUa" Value="1" />
     <Parameter ID="OpcUa_AuthenticationSecurityPolicy_EnableNone" Value="1" />
     <Parameter ID="OpcUa_AuthenticationSecurityPolicy_EnableBasic128Rsa15" Value="1" />
-    <Parameter ID="OpcUaInformationModels_PV_Version" Value="1" />
+    <Parameter ID="OpcUaInformationModels_PV_Version" Value="2" />
   </Module>
 </Hardware>
