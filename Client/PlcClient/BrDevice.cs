@@ -2,7 +2,6 @@
 using Opc.Ua.Client;
 using Opc.Ua.Client.ComplexTypes;
 using Opc.Ua.Configuration;
-using System.Diagnostics;
 
 namespace PlcClient
 {
@@ -40,6 +39,10 @@ namespace PlcClient
             var endpoint = new ConfiguredEndpoint(null, selectedEndpoint, endpointConfiguration);
             _session = Session.Create(config, endpoint, false, "", 60000, new UserIdentity(new AnonymousIdentityToken()), null).Result;
 
+            // this loads the defined types from the server, I think
+            ComplexTypeSystem complexTypeSystem = new ComplexTypeSystem(_session);
+            await complexTypeSystem.Load().ConfigureAwait(false);
+
             AddSubscriptions();
 
             await ReadInitialNodeValues();
@@ -51,10 +54,39 @@ namespace PlcClient
             NodeId struct1NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct1");
             NodeId struct2NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct2");
             NodeId enumNodeId = new NodeId($"ns=6;s=::AsGlobalPV:e1");
-            var s1 = await OpcUtils.ReadStructure<TDOs.Struct1>(_session, struct1NodeId);
-            var s2 = await OpcUtils.ReadStructure<TDOs.Struct2>(_session, struct2NodeId);
-            var e1 = await OpcUtils.ReadStructure<TDOs.Enum1>(_session, enumNodeId);
+            var s1 = await OpcUtils.ReadStructureAsync<TDOs.Struct1>(_session, struct1NodeId);
+            var s2 = await OpcUtils.ReadStructureAsync<TDOs.Struct2>(_session, struct2NodeId);
+            var e1 = await OpcUtils.ReadStructureAsync<TDOs.Enum1>(_session, enumNodeId);
             #endregion
+
+            var s2_modified = new TDOs.Struct2
+            {
+                myByte = 0xa0,
+                myFloat = -0.123f
+            };
+
+            //await OpcUtils.WriteStructureAsync(_session, struct2NodeId, s2_modified);
+
+            var s1_modified = new TDOs.Struct1
+            {
+                enum1 = TDOs.Enum1.Option1_0,
+                str="written from client",
+                int_array=new byte[]
+                {
+                    9,8,7,6,5,4,3,2,1,0
+                },
+                myFloat = (float)Math.E,
+                inner_struct = new TDOs.Struct2
+                {
+                    myByte = 0xAA,
+                    myFloat =(float)-Math.PI
+                }
+            };
+
+            await OpcUtils.WriteStructureAsync(_session, struct1NodeId, s1_modified);
+            
+            await ReadInitialNodeValues();
+
         }
 
         // TODO demonstrate and move to OpcUtils

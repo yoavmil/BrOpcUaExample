@@ -1,12 +1,14 @@
-﻿using Opc.Ua;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Opc.Ua;
 using Opc.Ua.Client;
-using Opc.Ua.Configuration;
 using Opc.Ua.Client.ComplexTypes;
 using System.Diagnostics;
-using Newtonsoft.Json;
-using System.Globalization;
-using System.Runtime.InteropServices;
-using Newtonsoft.Json.Linq;
+using System.Text;
+using System.Xml.Serialization;
+using System.Xml;
+using System.Reflection;
+using System.Collections;
 
 namespace PlcClient
 {
@@ -130,7 +132,7 @@ namespace PlcClient
                 jsonEncoder.WriteDataValue(name, value);
                 var jsonString = jsonEncoder.CloseAndReturnText();
                 if (prettify)
-                    jsonString = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(jsonString), Formatting.Indented);
+                    jsonString = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(jsonString), Newtonsoft.Json.Formatting.Indented);
                 return jsonString;
             }
             catch (Exception ex)
@@ -145,10 +147,24 @@ namespace PlcClient
             Debug.Write(GetVauleAsJson(session, name, value, true));
         }
 
-        public static async Task<T?> ReadStructure<T>(Session session, NodeId nodeId)
+        #region read struct, doesn't work
+        public static async Task<T?> ReadStructureAsync<T>(Session session, NodeId nodeId)
         {
             try
             {
+                DataValueCollection result;
+                var diagnosticInfo = new DiagnosticInfoCollection();
+                var readValueId = new ReadValueId
+                {
+                    NodeId = nodeId,
+                    AttributeId = Attributes.DataType
+                };
+
+                var collection = new ReadValueIdCollection { readValueId };
+                session.Read(null, 0, TimestampsToReturn.Both, collection, out result, out diagnosticInfo);
+
+                var node = session.ReadNode(nodeId);
+
                 var value = await session.ReadValueAsync(nodeId);
                 string jsonString = GetVauleAsJson(session, "Data", value, true);
                 var jObject = JObject.Parse(jsonString);
@@ -161,5 +177,203 @@ namespace PlcClient
                 return default(T);
             }
         }
+
+        public static byte[] ObjectToByteArray(object obj)
+        {
+            var json = JsonConvert.SerializeObject(obj);
+            return Encoding.UTF8.GetBytes(json);
+        }
+        public static XmlElement SerializeToXmlElement<T>(T obj)
+        {
+            XmlSerializer xmlSerializer = new XmlSerializer(typeof(T));
+            XmlDocument xmlDoc = new XmlDocument();
+
+            using (MemoryStream xmlStream = new MemoryStream())
+            {
+                xmlSerializer.Serialize(xmlStream, obj);
+                xmlStream.Position = 0;
+                xmlDoc.Load(xmlStream);
+            }
+
+            return xmlDoc.DocumentElement;
+        }
+
+        public static async Task WriteStructureAsync<T>(Session session, NodeId nodeId, T value)
+        {
+            DataValueCollection result;
+            var diagnosticInfo = new DiagnosticInfoCollection();
+            var readTypeId = new ReadValueId
+            {
+                NodeId = nodeId,
+                AttributeId = Attributes.DataType
+            };
+            var readValueId = new ReadValueId
+            {
+                NodeId = nodeId,
+                AttributeId = Attributes.Value
+            };
+
+
+
+            WriteValueCollection writeValues = new();
+
+            var collection = new ReadValueIdCollection { readTypeId, readValueId };
+            session.Read(null, 0, TimestampsToReturn.Both, collection, out result, out diagnosticInfo);
+            //{
+            //    var node = session.ReadNode((result[0].Value as NodeId));
+
+            //    ExtensionObject extensionObject = new ExtensionObject();
+            //    extensionObject.Body = value;
+            //    //extensionObject.Body = ObjectToByteArray(value);
+            //    //extensionObject.Body = SerializeToXmlElement(value);
+            //    extensionObject.TypeId = NodeId.ToExpandedNodeId(node.NodeId, session.NamespaceUris);
+
+            //    //var wrappedData = new { Data = new { Value = new { Body = value } } };
+            //    //var jsonString = JsonConvert.SerializeObject(wrappedData);
+            //    //var decoder = new JsonDecoder(jsonString, session.MessageContext);
+            //    //var dataValue = decoder.ReadDataValue("Data");
+            //    // IEncoder
+            //    //var extensionObject = new ExtensionObject(new ExpandedNodeId(nodeId), value);
+            //    //DataValue dataValue = new DataValue(extensionObject);
+            //    var writeValue = new WriteValue
+            //    {
+            //        NodeId = nodeId,
+            //        AttributeId = Attributes.Value,
+            //        // Value = new DataValue(extensionObject)
+            //        Value = new DataValue(extensionObject)
+            //    };
+
+            //}
+            #region
+            {
+
+                var extensionObject = result[1].Value as ExtensionObject;
+                if (extensionObject != null)
+                {
+                    var complexType = extensionObject.Body as BaseComplexType;
+                    if (complexType != null)
+                    {
+                        CopySimilarProperties(value, complexType);
+                        //foreach (var item in complexType.GetPropertyEnumerator())
+                        //{
+                        //    if (true && item.PropertyType == typeof(Byte))
+                        //    {
+                        //        var data = complexType[item.Name];
+                        //        if (data != null)
+                        //        {
+                        //            complexType[item.Name] = (Byte)((Byte)(data) + 1);
+                        //        }
+                        //    }
+                        //}
+
+                        WriteValue nodeToWrite = new WriteValue();
+                        nodeToWrite.NodeId = nodeId;
+                        nodeToWrite.AttributeId = Attributes.Value;
+                        nodeToWrite.Value = new DataValue();
+                        nodeToWrite.Value.WrappedValue = result[1].WrappedValue;
+
+                        writeValues.Add(nodeToWrite);
+                    }
+                }
+            }
+            #endregion
+
+
+
+            var responses = await session.WriteAsync(null, writeValues, CancellationToken.None);
+            bool isGood = StatusCode.IsGood(responses.Results[0]);
+            if (!isGood)
+            {
+                throw new Exception($"Write failed: {responses.Results[0]}");
+            }
+            //throw new NotImplementedException();
+        }
+
+        public static void CopySimilarProperties(object source, object target)
+        {
+            // Serialize the source object to JSON
+            string json = JsonConvert.SerializeObject(source);
+
+            // Deserialize the JSON into the target object
+            JsonConvert.PopulateObject(json, target);
+        }
+
+        #endregion
+
+        private static void BuildWriteValueCollection(object obj, string prefix, NodeId root, ref WriteValueCollection writeValues)
+        {
+            if (writeValues == null) throw new ArgumentNullException(nameof(writeValues));
+
+
+            Type type = obj.GetType();
+            foreach (PropertyInfo property in type.GetProperties(/*BindingFlags.Public | BindingFlags.Instance*/))
+            {
+                object value = property.GetValue(obj);
+                string propertyName = string.IsNullOrEmpty(prefix) ? property.Name : $"{prefix}.{property.Name}";
+               
+                if (value == null || property.PropertyType.IsValueType || property.PropertyType == typeof(string))
+                {
+                    NodeId nodeId = new NodeId($"{root}.{propertyName}");
+                    var writeValue = new WriteValue
+                    {
+                        NodeId = nodeId,
+                        AttributeId = Attributes.Value,
+                        Value = new DataValue
+                        {
+                            Value = value
+                        }
+                    };
+                    writeValues.Add(writeValue);
+                }
+                else if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string))
+                {
+                    NodeId nodeId = new NodeId($"{root}.{propertyName}");
+                    var writeValue = new WriteValue
+                    {
+                        NodeId = nodeId,
+                        AttributeId = Attributes.Value,
+                        Value = new DataValue(new Variant(value))
+                    };
+                    writeValues.Add(writeValue);
+                }
+                else
+                {
+                    BuildWriteValueCollection(value, propertyName, root, ref writeValues);
+                }
+            }
+        }
+
+        public static async Task WriteStructureAsync_<T>(Session session, NodeId nodeId, T value)
+        {
+            DataValueCollection result;
+            var diagnosticInfo = new DiagnosticInfoCollection();
+            var readValueId = new ReadValueId
+            {
+                NodeId = nodeId,
+                AttributeId = Attributes.DataType
+            };
+
+            var collection = new ReadValueIdCollection { readValueId };
+            session.Read(null, 0, TimestampsToReturn.Both, collection, out result, out diagnosticInfo);
+
+            var node = session.ReadNode(nodeId);
+
+            WriteValueCollection writeValues = new();
+            BuildWriteValueCollection(value, "", nodeId, ref writeValues);
+
+            var responses = await session.WriteAsync(null, writeValues, CancellationToken.None);
+            for (int i = 0; i < responses.Results.Count; i++)
+            {
+                bool isGood = StatusCode.IsGood(responses.Results[i]);
+                if (!isGood)
+                {
+                    throw new Exception($"Write failed: {responses.Results[i]}");
+                }
+            }
+
+            throw new NotImplementedException();
+        }
     }
+
+
 }
