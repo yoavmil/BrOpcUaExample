@@ -1,16 +1,18 @@
-﻿using Opc.Ua;
+﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Client.ComplexTypes;
 using Opc.Ua.Configuration;
 
 namespace PlcClient
 {
-    public class BrDevice
+    public class OpcDevice
     {
         private readonly ApplicationInstance _application;
         private string _plcOpcUrl = "opc.tcp://127.0.0.1:4840";
 
-        public BrDevice()
+        public OpcDevice()
         {
             string clientAppName = "PlcClient";
 
@@ -54,6 +56,10 @@ namespace PlcClient
             await DemonstrateReadVariables();
             await DemonstrateWriteVariables();
             await ReadInitialNodeValues();
+
+            // demonstrate variable handle usage
+            var st1Handle = await CreateVariableHandleAsync<TDOs.Struct1>("struct1");
+            await st1Handle.WriteValueAsync(new TDOs.Struct1());
         }
 
         private async Task DemonstrateWriteVariables()
@@ -297,6 +303,84 @@ namespace PlcClient
         
         #endregion nodes
 
-        
+        public async Task<IPlcVariableHandle<T>> CreateVariableHandleAsync<T>(
+            string variableName, 
+            string programName = ""
+        ) where T : new()
+        {
+            if (string.IsNullOrEmpty(programName)) programName = "AsGlobalPV";
+            PlcVariableHandle<T> handle = new()
+            {
+                Name = variableName,
+                Program = programName,
+                NodeId = new NodeId($"ns=6;s=::{programName}:{variableName}"),
+                Session = _session
+            };
+
+            // Try to read initial values and see if the variable name exist and if
+            // it matches the type T
+            try
+            {
+                DataValue value = await _session.ReadValueAsync(handle.NodeId);
+                ExtensionObject extensionObject = value.Value as ExtensionObject;
+                if (extensionObject != null && extensionObject.Body is BaseComplexType)
+                {
+                    var complexType = extensionObject.Body as BaseComplexType;
+                    if (complexType != null)
+                        handle.ExtObj = extensionObject;
+
+                    if (complexType != null && !AreAllFieldsPresent(new T(), complexType))
+                        throw new InvalidOperationException($"Type {nameof(T)} does not match variable {variableName}");
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Variable {variableName} not found: {ex.Message}");
+            }
+
+            return handle;
+        }
+
+        private static bool AreAllFieldsPresent(object source, object target)
+        {
+            if (source == null || target == null)
+            {
+                return false;
+            }
+
+            // Serialize both objects to JSON
+            string sourceJson = JsonConvert.SerializeObject(source);
+            string targetJson = JsonConvert.SerializeObject(target);
+
+            // Parse the JSON strings into JObject
+            JObject sourceJObject = JObject.Parse(sourceJson);
+            JObject targetJObject = JObject.Parse(targetJson);
+
+            // Compare the structures
+            return AreAllFieldsPresent(sourceJObject, targetJObject);
+        }
+
+        private static bool AreAllFieldsPresent(JObject sourceJObject, JObject targetJObject)
+        {
+            foreach (var property in sourceJObject.Properties())
+            {
+                JToken targetToken;
+                if (!targetJObject.TryGetValue(property.Name, out targetToken))
+                {
+                    return false; // Field not found in the target
+                }
+
+                if (property.Value.Type == JTokenType.Object)
+                {
+                    if (targetToken.Type != JTokenType.Object || !AreAllFieldsPresent((JObject)property.Value, (JObject)targetToken))
+                    {
+                        return false; // Nested object does not match
+                    }
+                }
+            }
+
+            return true; // All fields are present
+        }
     }
 }

@@ -59,7 +59,7 @@
             // 
             // brDeviceBindingSource
             // 
-            brDeviceBindingSource.DataSource = typeof(PlcClient.BrDevice);
+            brDeviceBindingSource.DataSource = typeof(PlcClient.OpcDevice);
             // 
             // flagCheckBox
             // 

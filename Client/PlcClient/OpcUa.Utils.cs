@@ -106,7 +106,7 @@ namespace PlcClient
             }
         }
 
-        public static async Task<T?> ReadStructureAsync<T>(Session session, NodeId nodeId) where T : new()
+        public static async Task<T> ReadStructureAsync<T>(Session session, NodeId nodeId) where T : new()
         {
             try
             {
@@ -121,7 +121,7 @@ namespace PlcClient
             }
             catch (Exception ex)
             {
-                return default(T);
+                throw new Exception($"Read failed: {ex.Message}");
             }
         }
 

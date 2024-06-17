@@ -9,11 +9,11 @@ namespace UI
             InitializeComponent();
         }
 
-        BrDevice? plc = null;
+        OpcDevice? plc = null;
 
         private async void connectBtn_Click(object sender, EventArgs e)
         {
-            plc = new BrDevice();
+            plc = new OpcDevice();
             await plc.Connect();
 
             flagCheckBox.Checked = plc.Flag;

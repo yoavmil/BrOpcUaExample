@@ -39,10 +39,10 @@ namespace TDOs
     public class Struct1
     {
         public Enum1 enum1 { get; set; }
-        public Struct2 inner_struct { get; set; }
+        public Struct2 inner_struct { get; set; } = new Struct2();
         public float myFloat { get; set; }
-        public string str { get; set; }
-        public byte[] int_array { get; set; }
+        public string str { get; set; } = "";
+        public byte[] int_array { get; set; } = new byte[10];
     }
 
     public class Struct2
