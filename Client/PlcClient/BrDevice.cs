@@ -246,27 +246,6 @@ namespace PlcClient
             return false;
         }
 
-        private async Task<NodeId?> GetNodeDataTypeAsync(NodeId nodeId)
-        {
-            var readValueId = new ReadValueId
-            {
-                NodeId = nodeId,
-                AttributeId = Attributes.DataType
-            };
-
-            var readValueIds = new ReadValueIdCollection { readValueId };
-
-            var requestHeader = new RequestHeader();
-            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
-
-            if (StatusCode.IsGood(readResults.Results[0].StatusCode))
-            {
-                return (NodeId)readResults.Results[0].Value;
-            }
-
-            return null;
-        }
-
         Session? _session;
         #region nodes 
         private async Task ReadInitialNodeValues()
@@ -316,7 +295,8 @@ namespace PlcClient
         NodeId _flagNodeId = new NodeId("ns=6;s=::AsGlobalPV:flag");
         #endregion
         
-
         #endregion nodes
+
+        
     }
 }
