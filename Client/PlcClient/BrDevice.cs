@@ -48,16 +48,18 @@ namespace PlcClient
             await ReadInitialNodeValues();
 
             await OpcUtils.PrintGlobalTypeNames(_session, 6);
+
             OpcUtils.PrintDataTypeSystem(_session, 6);
 
-            #region demonstrate reading complex types
+            await DemonstrateReadVariables();
+            await DemonstrateWriteVariables();
+            await ReadInitialNodeValues();
+        }
+
+        private async Task DemonstrateWriteVariables()
+        {
             NodeId struct1NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct1");
             NodeId struct2NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct2");
-            NodeId enumNodeId = new NodeId($"ns=6;s=::AsGlobalPV:e1");
-            var s1 = await OpcUtils.ReadStructureAsync<TDOs.Struct1>(_session, struct1NodeId);
-            var s2 = await OpcUtils.ReadStructureAsync<TDOs.Struct2>(_session, struct2NodeId);
-            var e1 = await OpcUtils.ReadStructureAsync<TDOs.Enum1>(_session, enumNodeId);
-            #endregion
 
             var s2_modified = new TDOs.Struct2
             {
@@ -65,7 +67,7 @@ namespace PlcClient
                 myFloat = -0.123f
             };
 
-            //await OpcUtils.WriteStructureAsync(_session, struct2NodeId, s2_modified);
+            await OpcUtils.WriteStructureAsync(_session, struct2NodeId, s2_modified);
 
             var s1_modified = new TDOs.Struct1
             {
@@ -84,9 +86,16 @@ namespace PlcClient
             };
 
             await OpcUtils.WriteStructureAsync(_session, struct1NodeId, s1_modified);
-            
-            await ReadInitialNodeValues();
+        }
 
+        private async Task DemonstrateReadVariables()
+        {
+            NodeId struct1NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct1");
+            NodeId struct2NodeId = new NodeId($"ns=6;s=::AsGlobalPV:struct2");
+            NodeId enumNodeId = new NodeId($"ns=6;s=::AsGlobalPV:e1");
+            var s1 = await OpcUtils.ReadStructureAsync<TDOs.Struct1>(_session, struct1NodeId);
+            var s2 = await OpcUtils.ReadStructureAsync<TDOs.Struct2>(_session, struct2NodeId);
+            var e1 = await OpcUtils.ReadStructureAsync<TDOs.Enum1>(_session, enumNodeId);
         }
 
         // TODO demonstrate and move to OpcUtils
@@ -256,44 +265,6 @@ namespace PlcClient
             }
 
             return null;
-        }
-
-        private static string GetDataTypeName(NodeId dataTypeNodeId)
-        {
-            Dictionary<NodeId, Type> dataTypeMapping = new Dictionary<NodeId, Type>
-            {
-                { DataTypeIds.Boolean, typeof(bool) },
-                { DataTypeIds.SByte, typeof(sbyte) },
-                { DataTypeIds.Byte, typeof(byte) },
-                { DataTypeIds.Int16, typeof(short) },
-                { DataTypeIds.UInt16, typeof(ushort) },
-                { DataTypeIds.Int32, typeof(int) },
-                { DataTypeIds.UInt32, typeof(uint) },
-                { DataTypeIds.Int64, typeof(long) },
-                { DataTypeIds.UInt64, typeof(ulong) },
-                { DataTypeIds.Float, typeof(float) },
-                { DataTypeIds.Double, typeof(double) },
-                { DataTypeIds.String, typeof(string) },
-                { DataTypeIds.DateTime, typeof(DateTime) },
-                { DataTypeIds.Guid, typeof(Guid) },
-                { DataTypeIds.ByteString, typeof(byte[]) },
-                { DataTypeIds.XmlElement, typeof(System.Xml.XmlElement) },
-                { DataTypeIds.NodeId, typeof(NodeId) },
-                { DataTypeIds.ExpandedNodeId, typeof(ExpandedNodeId) },
-                { DataTypeIds.StatusCode, typeof(StatusCode) },
-                { DataTypeIds.QualifiedName, typeof(QualifiedName) },
-                { DataTypeIds.LocalizedText, typeof(LocalizedText) },
-                { DataTypeIds.DataValue, typeof(DataValue) },
-                { DataTypeIds.DiagnosticInfo, typeof(DiagnosticInfo) },
-                { DataTypeIds.Enumeration, typeof(Enum) },
-                { DataTypeIds.Structure, typeof(object) } // For complex structures, typically you will define custom classes or structs
-            };
-
-            if (dataTypeMapping.TryGetValue(dataTypeNodeId, out Type? csharpType))
-            {
-                return csharpType?.Name ?? "Unknown";
-            }
-            return "Unknown";
         }
 
         Session? _session;
