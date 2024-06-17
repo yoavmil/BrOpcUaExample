@@ -6,9 +6,9 @@ namespace PlcClient
     internal class PlcVariableHandle<T> : IPlcVariableHandle<T> where T : new()
     {
         public string Name { get; set; }
-        public string Program { get; set; }
+        public string Program { get; set; } // TODO check
 
-        public event EventHandler ValueChanged;
+        public event EventHandler ValueChanged; // TODO
 
         public Task<T> ReadValueAsync()
         {
@@ -17,11 +17,10 @@ namespace PlcClient
 
         public Task WriteValueAsync(T value)
         {
-            return OpcUtils.WriteStructureAsync(Session, NodeId, value);
+            return OpcUtils.WriteStructureAsync(Session, NodeId, value, ExtObj);
         }
 
         public NodeId NodeId { get; set; }
-        public object Value { get; set; }
         public ExtensionObject ExtObj { get; set; } // for complex types
         public Session Session { get; set; }
     }

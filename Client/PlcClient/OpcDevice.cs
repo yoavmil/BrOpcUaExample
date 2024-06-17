@@ -332,7 +332,6 @@ namespace PlcClient
                     if (complexType != null && !AreAllFieldsPresent(new T(), complexType))
                         throw new InvalidOperationException($"Type {nameof(T)} does not match variable {variableName}");
                 }
-                
             }
             catch (Exception ex)
             {

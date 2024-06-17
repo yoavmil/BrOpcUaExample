@@ -1,14 +1,8 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Client.ComplexTypes;
 using System.Diagnostics;
-using System.Text;
-using System.Xml.Serialization;
-using System.Xml;
-using System.Reflection;
-using System.Collections;
 
 namespace PlcClient
 {
@@ -125,30 +119,28 @@ namespace PlcClient
             }
         }
 
-        public static async Task WriteStructureAsync<T>(Session session, NodeId nodeId, T value)
+        public static async Task WriteStructureAsync<T>(Session session, NodeId nodeId, T value, ExtensionObject extObj = null)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
 
-            // to write the value, as a ComplexType, we need some properties that could be read
-            // from the PLC, such as BinaryEncodingId. So we read the structure (at least once)
-            // from the PLC, and replace only the data we want to write, and then write it back.
-            DataValueCollection readResult;
-            var diagnosticInfo = new DiagnosticInfoCollection();
-            var readValueId = new ReadValueId
-            {
-                NodeId = nodeId,
-                AttributeId = Attributes.Value
-            };
-
             WriteValueCollection writeValues = new();
 
-            var collection = new ReadValueIdCollection { readValueId };
-            session.Read(null, 0, TimestampsToReturn.Both, collection, out readResult, out diagnosticInfo);
-
-            var extensionObject = readResult[0].Value as ExtensionObject;
-            if (extensionObject != null)
+            if (typeof(T).IsClass)
             {
-                var complexType = extensionObject.Body as BaseComplexType;
+                if (extObj == null)
+                {
+                    // to write the value, as a ComplexType, we need some properties that could be read
+                    // from the PLC, such as BinaryEncodingId. So we read the structure (at least once)
+                    // from the PLC, and replace only the data we want to write, and then write it back.
+
+                    DataValue dataValue = await session.ReadValueAsync(nodeId);
+                    extObj = dataValue.Value as ExtensionObject;
+                }
+
+                if (extObj == null)
+                    throw new InvalidOperationException($"Cannot find the PLC refkection of {nameof(T)} at {nodeId}");
+                
+                var complexType = extObj.Body as BaseComplexType;
                 if (complexType != null)
                 {
                     CopySimilarProperties(value, complexType);
@@ -157,10 +149,18 @@ namespace PlcClient
                     nodeToWrite.NodeId = nodeId;
                     nodeToWrite.AttributeId = Attributes.Value;
                     nodeToWrite.Value = new DataValue();
-                    nodeToWrite.Value.WrappedValue = readResult[0].WrappedValue;
+                    nodeToWrite.Value.WrappedValue = extObj;
 
                     writeValues.Add(nodeToWrite);
                 }
+            }
+            else
+            {
+                WriteValue nodeToWrite = new WriteValue();
+                nodeToWrite.NodeId = nodeId;
+                nodeToWrite.AttributeId = Attributes.Value;
+                nodeToWrite.Value = new DataValue() { Value = value };
+                writeValues.Add(nodeToWrite);
             }
 
             var responses = await session.WriteAsync(null, writeValues, CancellationToken.None);
