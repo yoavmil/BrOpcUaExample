@@ -50,14 +50,16 @@ namespace PlcClient
             await ReadInitialNodeValues();
 
             await OpcUtils.PrintGlobalTypeNames(_session, 6);
-
             OpcUtils.PrintDataTypeSystem(_session, 6);
 
             await DemonstrateReadVariables();
             await DemonstrateWriteVariables();
+            await DemonstraitUsingHandles();
             await ReadInitialNodeValues();
+        }
 
-            // demonstrate variable handle usage
+        private async Task DemonstraitUsingHandles()
+        {
             var st1Handle = await CreateVariableHandleAsync<TDOs.Struct1>("struct1");
             await st1Handle.WriteValueAsync(new TDOs.Struct1());
         }
@@ -102,38 +104,6 @@ namespace PlcClient
             var s1 = await OpcUtils.ReadStructureAsync<TDOs.Struct1>(_session, struct1NodeId);
             var s2 = await OpcUtils.ReadStructureAsync<TDOs.Struct2>(_session, struct2NodeId);
             var e1 = await OpcUtils.ReadStructureAsync<TDOs.Enum1>(_session, enumNodeId);
-        }
-
-        // TODO demonstrate and move to OpcUtils
-        private void WriteValue(Session session, NodeId variableId, DataValue value)
-        {
-            WriteValue nodeToWrite = new WriteValue();
-            nodeToWrite.NodeId = variableId;
-            nodeToWrite.AttributeId = Attributes.Value;
-            nodeToWrite.Value = new DataValue();
-            nodeToWrite.Value.WrappedValue = value.WrappedValue;
-
-            WriteValueCollection nodesToWrite = new WriteValueCollection();
-            nodesToWrite.Add(nodeToWrite);
-
-            // read the attributes.
-            StatusCodeCollection results = null;
-            DiagnosticInfoCollection diagnosticInfos = null;
-
-            ResponseHeader responseHeader = session.Write(
-                null,
-                nodesToWrite,
-                out results,
-                out diagnosticInfos);
-
-            ClientBase.ValidateResponse(results, nodesToWrite);
-            ClientBase.ValidateDiagnosticInfos(diagnosticInfos, nodesToWrite);
-
-            // check for error.
-            if (StatusCode.IsBad(results[0]))
-            {
-                throw ServiceResultException.Create(results[0], 0, diagnosticInfos, responseHeader.StringTable);
-            }
         }
 
         void AddSubscriptions()
@@ -185,79 +155,13 @@ namespace PlcClient
             }
         }
 
-        private async Task<object?> ReadNodeValueAsync(NodeId nodeId)
-        {
-            var readValueId = new ReadValueId
-            {
-                NodeId = nodeId,
-                AttributeId = Attributes.Value
-            };
-
-            var readValueIds = new ReadValueIdCollection { readValueId };
-
-            var requestHeader = new RequestHeader();
-            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
-
-            if (StatusCode.IsGood(readResults.Results[0].StatusCode))
-            {
-                return readResults.Results[0].Value;
-            }
-
-            return null;
-        }
-
-        private async Task<bool> WriteNodeValueAsync(NodeId nodeId, object value)
-        {
-            var isWritable = await IsNodeWritableAsync(nodeId);
-            if (!isWritable) return false;
-            var writeValue = new WriteValue
-            {
-                NodeId = nodeId,
-                AttributeId = Attributes.Value,
-                Value = new DataValue { Value = value, }
-            };
-
-            var writeValues = new WriteValueCollection { writeValue };
-
-            var requestHeader = new RequestHeader();
-            var writeResults = await _session?.WriteAsync(requestHeader, writeValues, CancellationToken.None);
-
-            bool isGood = StatusCode.IsGood(writeResults.Results[0]);
-            if (!isGood)
-            {
-                throw new Exception($"Write failed: {writeResults.Results[0]}");
-            }
-            return isGood;
-        }
-
-        private async Task<bool> IsNodeWritableAsync(NodeId nodeId)
-        {
-            var readValueId = new ReadValueId
-            {
-                NodeId = nodeId,
-                AttributeId = Attributes.AccessLevel
-            };
-
-            var readValueIds = new ReadValueIdCollection { readValueId };
-
-            var requestHeader = new RequestHeader();
-            var readResults = await _session?.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
-
-            if (StatusCode.IsGood(readResults.Results[0].StatusCode))
-            {
-                var accessLevel = (byte)readResults.Results[0].Value;
-                return (accessLevel & AccessLevels.CurrentWrite) != 0;
-            }
-
-            return false;
-        }
-
         Session? _session;
-        #region nodes 
+
+        #region counter and flag demonstration
         private async Task ReadInitialNodeValues()
         {
-            if (_counterNodeId != null) _counter = await ReadNodeValueAsync(_counterNodeId) as byte? ?? 0;
-            if (_flagNodeId != null) _flag = await ReadNodeValueAsync(_flagNodeId) as bool? ?? false;
+            _counter = await OpcUtils.ReadStructureAsync<byte>(_session, _counterNodeId);
+            _flag = await OpcUtils.ReadStructureAsync<bool>(_session, _flagNodeId);
         }
 
         #region counter
@@ -293,20 +197,20 @@ namespace PlcClient
             }
             set
             {
-                _ = WriteNodeValueAsync(_flagNodeId, value);
+                _ = OpcUtils.WriteStructureAsync(_session, _flagNodeId, value);
                 // the event will set the internal _flag
             }
         }
         private bool _flag;
         NodeId _flagNodeId = new NodeId("ns=6;s=::AsGlobalPV:flag");
         #endregion
-        
+
         #endregion nodes
 
         public async Task<IPlcVariableHandle<T>> CreateVariableHandleAsync<T>(
-            string variableName, 
-            string programName = ""
-        ) where T : new()
+                string variableName,
+                string programName = ""
+            ) where T : new()
         {
             if (string.IsNullOrEmpty(programName)) programName = "AsGlobalPV";
             PlcVariableHandle<T> handle = new()

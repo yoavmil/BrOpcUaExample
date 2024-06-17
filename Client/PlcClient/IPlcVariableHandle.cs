@@ -12,6 +12,6 @@ namespace PlcClient
         string Program { get; set; } // empty for global
         Task<T> ReadValueAsync();
         Task WriteValueAsync(T value);
-        event EventHandler ValueChanged;
+        event EventHandler ValueChanged; // TODO
     }
 }

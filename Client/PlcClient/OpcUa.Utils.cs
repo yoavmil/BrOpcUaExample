@@ -99,6 +99,28 @@ namespace PlcClient
                 }
             }
         }
+       
+        public static async Task<bool> IsNodeWritableAsync(Session session, NodeId nodeId)
+        {
+            var readValueId = new ReadValueId
+            {
+                NodeId = nodeId,
+                AttributeId = Attributes.AccessLevel
+            };
+
+            var readValueIds = new ReadValueIdCollection { readValueId };
+
+            var requestHeader = new RequestHeader();
+            var readResults = await session.ReadAsync(requestHeader, 0, TimestampsToReturn.Both, readValueIds, CancellationToken.None);
+
+            if (StatusCode.IsGood(readResults.Results[0].StatusCode))
+            {
+                var accessLevel = (byte)readResults.Results[0].Value;
+                return (accessLevel & AccessLevels.CurrentWrite) != 0;
+            }
+
+            return false;
+        }
 
         public static async Task<T> ReadStructureAsync<T>(Session session, NodeId nodeId) where T : new()
         {
@@ -171,7 +193,7 @@ namespace PlcClient
             }
         }
 
-        public static void CopySimilarProperties(object source, object target)
+        private static void CopySimilarProperties(object source, object target)
         {
             // Serialize the source object to JSON
             string json = JsonConvert.SerializeObject(source);

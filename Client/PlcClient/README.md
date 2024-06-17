@@ -93,8 +93,9 @@ and for that there are 2 files I copied from the OPC Foundation samples: `App.Co
 This demo shows how to transfer structures that exist both in the server and in the client.
 They client classes need to reflect the PLC structures, see `PlcStructs.cs`.
 
-The client reads the variable data as converts it to Json, and later to C# objects,
-see `ReadStructure<T>` at `PlcStructs.cs`.
+There is a variable handle `IPlcVariableHandle` for reading and writing variables. 
+It is typesafe, ex. it checks the types match on both sides. Create one by calling
+`OpcDevice.CreateVariableHandleAsync()`
 
 ### Client SDK options
 
@@ -115,9 +116,7 @@ there is more than one option out there:
 
 ## Todo
 - Hadnle PLC not found
-- ~~Read~~/Write and reflect complex types, ex. structs
 - variables from an program, and not global.
-- write a class that encapsulates the variable and handles the access calls.
 
 ## Types Dictionary
 
